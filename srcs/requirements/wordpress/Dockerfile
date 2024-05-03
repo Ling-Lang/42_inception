@@ -27,12 +27,12 @@ RUN apk update && apk upgrade && apk add --no-cache \
     sed -i "s|;listen.group = nobody|listen.group = nobody|g" \
       /etc/php81/php-fpm.d/www.conf && \
     rm -f /var/cache/apk/*
-WORKDIR /var/www
+WORKDIR /var/www/
 RUN wget https://wordpress.org/latest.zip && \
     unzip latest.zip && \
     cp -rf wordpress/* . && \
     rm -rf wordpress latest.zip
-COPY requirements/wordpress/conf/config.sh .
+COPY ./requirements/wordpress/conf/config.sh .
 RUN sh config.sh && rm config.sh && \
     chmod -R 0777 wp-content/
 CMD ["/usr/sbin/php-fpm81", "-F"]
