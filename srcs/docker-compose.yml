@@ -1,79 +1,69 @@
-version: '3.7'
-
-services:
-
-  nginx:
-    build:
-      context: .
-      dockerfile: requirements/nginx/Dockerfile
-    container_name: nginx
-    depends_on:
-      - wordpress
-    ports:
-      - "443:443"
-    networks:
-      - inception
-    volumes:
-      - ./requirements/nginx/conf/:/etc/nginx/http.d/
-      - ./requirements/nginx/tools:/etc/nginx/ssl/
-      - /home/$USER/data/wordpress:/var/www/ # - wp-volume:/var/www/ DIDN'T WORK
-    restart: unless-stopped
-
-  mariadb:
-    build:
-      context: .
-      dockerfile: requirements/mariadb/Dockerfile
-      args:
-        DB_NAME: ${DB_NAME}
-        DB_USER: ${DB_USER}
-        DB_PASSWORD: ${DB_PASSWORD}
-        DB_ROOT: ${DB_ROOT}
-    container_name: mariadb
-    ports:
-      - "3306:3306"
-    networks:
-      - inception
-    volumes:
-      - /home/$USER/data/mariadb:/var/lib/mysql # - db-volume:/var/lib/mysql DIDN'T WORK
-    restart: unless-stopped
-
-  wordpress:
-    build:
-      context: .
-      dockerfile: requirements/wordpress/Dockerfile
-      args:
-        DB_NAME: ${DB_NAME}
-        DB_USER: ${DB_USER}
-        DB_PASSWORD: ${DB_PASSWORD}
-    container_name: wordpress
-    depends_on:
-      - mariadb
-    networks:
-      - inception
-    volumes:
-      - /home/$USER/data/wordpress:/var/www/ # - wp-volume:/var/www/ DIDN'T WORK
-    restart: unless-stopped
-
-networks:
-    inception:
-        driver: bridge
-
-# volumes:
-#    db-volume:
-#    wp-volume:
-
 volumes:
-
   wp-volume:
     driver: local
     driver_opts:
       o: bind
       type: none
       device: /home/$USER/data/wordpress
-
   db-volume:
     driver: local
     driver_opts:
       o: bind
       type: none
       device: /home/$USER/data/mariadb
+  
+networks:
+    inception:
+      name: inception
+
+services:
+  nginx:
+    container_name: nginx
+    build:
+      context: .
+      dockerfile: ./requirements/nginx/Dockerfile
+    ports:
+      - 443:443
+    depends_on:
+      - wordpress
+    volumes:
+      - wp-volume:/var/www/
+      - ./requirements/nginx/conf/:/etc/nginx/http.d/
+      - ./requirements/nginx/conf/certs:/etc/nginx/ssl
+    networks:
+      - inception
+    restart: unless-stopped
+  wordpress:
+    container_name: wordpress
+    build:
+      context: .
+      dockerfile: ./requirements/wordpress/Dockerfile
+      args:
+        DB_NAME: ${DB_NAME}
+        DB_USER: ${DB_USER}
+        DB_PASSWORD: ${DB_PASS}
+    depends_on:
+      - mariadb
+    volumes:
+      - wp-volume:/var/www/
+    networks:
+      - inception
+    restart: unless-stopped
+  mariadb:
+    container_name: mariadb
+    build:
+      context: .
+      dockerfile: ./requirements/mariadb/Dockerfile
+      args:
+        DB_NAME: ${DB_NAME}
+        DB_USER: ${DB_USER}
+        DB_PASS: ${DB_PASS}
+        DB_ROOT: ${DB_ROOT}
+    ports:
+      - "3306:3306"
+    volumes:
+      - db-volume:/var/lib/mysql
+    networks:
+      - inception
+    restart: unless-stopped
+

@@ -1,22 +1,30 @@
 FROM alpine:3.18
 
+# Environmental variables 
+ARG DB_NAME \
+    DB_USER \
+    DB_PASSWORD
+
 RUN apk update && apk add --no-cache mariadb mariadb-client
 
-RUN mkdir /var/run/mysqld; \
-    chmod -R 0777 /var/run/mysqld; \
-    { echo '[mysqld]'; \
-      echo 'skip-host-cache'; \
-      echo 'skip-name-resolve'; \
-      echo 'bind-address=0.0.0.0'; \
-    } | tee  /etc/my.cnf.d/docker.cnf; \
-    sed -i "s|skip-networking|skip-networking=0|g" \
-      /etc/my.cnf.d/mariadb-server.cnf
+# Copy custom MariaDB configuration files
+COPY requirements/mariadb/my.cnf /etc/my.cnf.d/docker.cnf
+COPY requirements/mariadb/mariadb-server.cnf /etc/my.cnf.d/mariadb-server.cnf
 
-RUN mysql_install_db --user=mysql --datadir=/var/lib/mysql
+# Initialize MariaDB data directory and database
+RUN mysql_install_db --user=mysql --datadir=/var/lib/mysql && \
+    chown -R mysql:mysql /var/lib/mysql
 
+# Expose MariaDB default port
 EXPOSE 3306
 
+# Copy database initialization script and execute it
+COPY requirements/mariadb/tools/db.sh /
+RUN /bin/sh /db.sh && rm /db.sh
+
+# Switch to non-root user
 USER mysql
-COPY tools/database.sh .
-ENTRYPOINT  ["sh", "db.sh"]
-CMD ["/usr/bin/mysqld", "--skip-log-error"
+
+# Start MariaDB server
+CMD ["/usr/bin/mysqld"]
+

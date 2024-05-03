@@ -32,7 +32,7 @@ RUN wget https://wordpress.org/latest.zip && \
     unzip latest.zip && \
     cp -rf wordpress/* . && \
     rm -rf wordpress latest.zip
-COPY ./requirements/wordpress/conf/config.sh .
+COPY requirements/wordpress/conf/config.sh .
 RUN sh config.sh && rm config.sh && \
     chmod -R 0777 wp-content/
 CMD ["/usr/sbin/php-fpm81", "-F"]
